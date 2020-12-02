@@ -4,8 +4,8 @@ import json
 import logging
 import random
 import sys
-import time
 import threading
+import time
 
 from ecdsa import NIST256p
 from ecdsa import VerifyingKey
@@ -22,8 +22,6 @@ BLOCKCHAIN_PORT_RANGE = (5000, 5003)
 NEIGHBOURS_IP_RANGE_NUM = (0, 1)
 BLOCKCHAIN_NEIGHBOURS_SYNC_TIME_SEC = 20
 
-# ILLEGAL_TIMER_SEC = 20
-
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
@@ -36,7 +34,6 @@ class BlockChain(object):
         self.neighbours = []
         self.mining_speed = random.uniform(4.8, 5.3)
         self.difficulty = 3
-        # self.add_transaction_flag = False
         self.create_block(0, self.hash({}))
         self.blockchain_address = blockchain_address
         self.port = port
@@ -95,19 +92,13 @@ class BlockChain(object):
 
         if sender_blockchain_address == MINING_SENDER:
             self.transaction_pool.append(transaction)
-            # self.add_transaction_flag = True
             return True
 
         if self.verify_transaction_signature(sender_public_key, signature, transaction):
-            # self.add_transaction_flag = False
-
             if self.calculate_total_amount(sender_blockchain_address) < float(value):
                 logger.error({'action': 'add_transaction', 'error': 'no_value'})
-                # self.add_transaction_flag = False
                 return False
-
             self.transaction_pool.append(transaction)
-            # self.add_transaction_flag = True
             return True
 
         return False
@@ -211,23 +202,13 @@ class BlockChain(object):
 
         return True
 
-    """"
-    #不正を行う
-    def illegal(self, recipient_blockchain_address, value):
-        if self.add_transaction_flag:
-            if self.transaction_pool['recipient_blockchain_address'] == recipient_blockchain_address:
-                self.transaction_pool['value'] = value
-                logger.info({'action': 'illegal', 'status': 'success'})
-    """
-
-
     def start_mining(self):
         is_acquire = self.mining_semaphore.acquire(blocking=False)
         if is_acquire:
             with contextlib.ExitStack() as stack:
                 stack.callback(self.mining_semaphore.release)
                 self.mining()
-                loop = threading.Timer(10, self.start_mining)
+                loop = threading.Timer(self.mining_speed, self.start_mining)
                 loop.start()
 
     def calculate_total_amount(self, blockchain_address):
