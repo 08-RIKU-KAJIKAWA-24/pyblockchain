@@ -4,8 +4,8 @@ import json
 import logging
 import random
 import sys
-import threading
 import time
+import threading
 
 from ecdsa import NIST256p
 from ecdsa import VerifyingKey
@@ -22,6 +22,9 @@ BLOCKCHAIN_PORT_RANGE = (5000, 5003)
 NEIGHBOURS_IP_RANGE_NUM = (0, 1)
 BLOCKCHAIN_NEIGHBOURS_SYNC_TIME_SEC = 20
 
+ILLEGAL_TIMER_SEC = 20
+HACKING = 'HACKER'
+
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
@@ -32,7 +35,7 @@ class BlockChain(object):
         self.transaction_pool = []
         self.chain = []
         self.neighbours = []
-        self.mining_speed = random.uniform(4.8, 5.3)
+        self.mining_speed = random.uniform(5.0, 5.3)
         self.difficulty = 3
         self.create_block(0, self.hash({}))
         self.blockchain_address = blockchain_address
@@ -44,6 +47,7 @@ class BlockChain(object):
         self.sync_neighbours()
         self.resolve_conflicts()
         self.start_mining()
+        # self.carry_on_illegal()
 
     def set_neighbours(self):
         self.neighbours = utils.find_neighbours(
@@ -89,11 +93,9 @@ class BlockChain(object):
             'recipient_blockchain_address': recipient_blockchain_address,
             'value': float(value)
         })
-
         if sender_blockchain_address == MINING_SENDER:
             self.transaction_pool.append(transaction)
             return True
-
         if self.verify_transaction_signature(sender_public_key, signature, transaction):
             if self.calculate_total_amount(sender_blockchain_address) < float(value):
                 logger.error({'action': 'add_transaction', 'error': 'no_value'})
@@ -151,7 +153,6 @@ class BlockChain(object):
                 self.difficulty -= 1
         else:
             self.mining_speed = 5.0 + random.uniform(0.0, 0.4)
-
         return self.mining_speed
 
     def valid_proof(self, transactions, previous_hash, nonce):
@@ -194,13 +195,35 @@ class BlockChain(object):
 
         self.daa(self.mining_speed)
 
-        print('mining time : ' + str(round(self.mining_speed, 3)))
-        print('difficulty : ', str(self.difficulty))
+        # print('mining time : ' + str(round(self.mining_speed, 3)))
+        # print('difficulty : ', str(self.difficulty))
 
         stop = round(self.mining_speed)
         time.sleep(stop)
 
         return True
+
+    """"
+    def illegal(self, recipient_blockchain_address, value):
+        if self.add_transaction:
+            if self.chain == []:
+                logger.info({'action': 'illegal', 'status': 'chain is empty'})
+                return False
+            for block in self.chain:
+                for transaction in block['transaction']:
+                    if transaction['recipient_blockchain_address'] == recipient_blockchain_address:
+                        transaction['value'] = value
+                        logger.info({'action': 'illegal', 'status': 'success'})
+                        return True
+                logger.info({'action': 'illegal', 'status': 'fail'})
+                return False
+        return False
+    
+    def carry_on_illegal(self):
+        while True:
+            self.illegal(HACKING, 1000)
+            time.sleep(ILLEGAL_TIMER_SEC)     
+    """
 
     def start_mining(self):
         is_acquire = self.mining_semaphore.acquire(blocking=False)
